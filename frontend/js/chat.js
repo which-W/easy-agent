@@ -282,7 +282,8 @@ class ChatController {
             session_id: this.currentSessionId,
             message: message,
             files: files,
-            deep_research: deepResearch
+            deep_research: deepResearch,
+            persona: (typeof getPersona === 'function') ? getPersona() || null : null
         };
 
         // Clear pending files

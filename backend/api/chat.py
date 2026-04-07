@@ -57,7 +57,8 @@ async def event_generator(
     session_id: str,
     message: str,
     files: list,
-    deep_research: bool
+    deep_research: bool,
+    persona: str | None = None
 ) -> AsyncGenerator[str, None]:
     """Generate SSE events from agent response"""
 
@@ -72,7 +73,9 @@ async def event_generator(
         has_videos = any(f.type == "video" for f in files)
 
         # Get or create session (pass has_multimodal to select appropriate model)
-        session = session_manager.get_or_create(session_id, deep_research, has_images or has_videos)
+        session = session_manager.get_or_create(
+            session_id, deep_research, has_images or has_videos, persona
+        )
 
         # Build content for multimodal input
         # DashScope/Qwen VL 模型支持的多模态格式
@@ -334,7 +337,8 @@ async def chat_stream(request: ChatRequest):
             session_id=request.session_id,
             message=request.message,
             files=request.files,
-            deep_research=request.deep_research
+            deep_research=request.deep_research,
+            persona=request.persona
         ),
         media_type="text/event-stream",
         headers={

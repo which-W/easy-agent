@@ -39,6 +39,9 @@
                 <button class="btn-menu" id="btnMenu">☰</button>
                 <h2 class="current-chat-title" id="currentChatTitle">新对话</h2>
                 <div class="header-actions">
+                    <button class="btn-persona" id="btnPersona" title="设置 AI 人格">
+                        🎭 <span id="personaLabel">默认助手</span>
+                    </button>
                     <label class="toggle-deep-research">
                         <input type="checkbox" id="deepResearchToggle">
                         <span class="toggle-slider"></span>
@@ -86,6 +89,52 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- Persona Modal -->
+    <div class="modal-overlay" id="personaModal" style="display:none;">
+        <div class="modal-panel">
+            <div class="modal-header">
+                <h3>🎭 AI 人格设置</h3>
+                <button class="modal-close" id="btnPersonaClose">×</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Preset personas -->
+                <div class="persona-presets">
+                    <p class="preset-label">快速选择预设</p>
+                    <div class="preset-grid" id="presetGrid">
+                        <button class="preset-btn" data-persona="">🤖 默认助手</button>
+                        <button class="preset-btn" data-persona="你是一位严谨的专业代码审查专家，精通多种编程语言。请用简洁精准的语言分析代码问题，指出潜在风险，并给出最佳实践建议。">💻 代码专家</button>
+                        <button class="preset-btn" data-persona="你是一位耐心温和的教学导师，善于用通俗易懂的语言解释复杂概念，多用类比和例子，引导学生主动思考而非直接给出答案。">📚 学习导师</button>
+                        <button class="preset-btn" data-persona="你是一位创意写作顾问，文笔优美，想象力丰富。协助用户构建故事情节、塑造人物、打磨文字，风格可根据需求调整。">✍️ 创意写作</button>
+                        <button class="preset-btn" data-persona="你是一位专业的商业分析师，擅长数据解读、市场分析和战略规划。回答时注重逻辑严密、数据支撑，并提供可执行的建议。">📊 商业分析</button>
+                        <button class="preset-btn" data-persona="你是一位幽默风趣的对话伙伴，语言轻松活泼，善用比喻和玩笑，但不失真诚。在轻松氛围中提供实质性帮助。">😄 轻松聊天</button>
+                        <button class="preset-btn" data-persona="你是一位专业的多语言翻译和语言学习助手，精通中、英、日、韩、法、德等多种语言，能提供准确翻译并解释语言差异。">🌍 翻译助手</button>
+                        <button class="preset-btn" data-persona="你是一位知识渊博的历史与文化研究者，能深度解析历史事件、文化背景和社会现象，善于在历史与现实之间建立联系。">🏛️ 历史文化</button>
+                    </div>
+                </div>
+
+                <!-- Custom persona editor -->
+                <div class="persona-custom">
+                    <p class="preset-label">自定义人格描述
+                        <span class="char-count" id="personaCharCount">0 / 500</span>
+                    </p>
+                    <textarea
+                        id="personaInput"
+                        class="persona-textarea"
+                        placeholder="描述 AI 的角色、专业领域、回答风格等...&#10;例如：你是一位专注于 Python 的后端工程师，回答时优先使用 Python 示例，注重代码性能和可读性。"
+                        maxlength="500"
+                        rows="5"
+                    ></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-cancel" id="btnPersonaCancel">取消</button>
+                <button class="btn-apply" id="btnPersonaApply">✓ 应用人格</button>
+            </div>
+        </div>
     </div>
 
     <!-- Loading Overlay -->

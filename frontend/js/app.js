@@ -10,6 +10,30 @@ const API_BASE_URL = '';
 const chat = new ChatController(API_BASE_URL);
 const uploadHandler = new UploadHandler(API_BASE_URL);
 
+// ── Persona state ──────────────────────────────────────────────────────────
+let currentPersona = localStorage.getItem('easy-agent-persona') || '';
+
+/** Return the active persona string (empty = default) */
+function getPersona() { return currentPersona; }
+
+/** Persist and update UI label after applying a persona */
+function applyPersona(text) {
+    currentPersona = text ? text.trim() : '';
+    localStorage.setItem('easy-agent-persona', currentPersona);
+
+    // Update header label
+    const label = document.getElementById('personaLabel');
+    if (label) {
+        label.textContent = currentPersona
+            ? currentPersona.substring(0, 12) + (currentPersona.length > 12 ? '…' : '')
+            : '默认助手';
+    }
+
+    // Reset session so next message uses the new persona
+    chat.currentSessionId = null;
+}
+// ──────────────────────────────────────────────────────────────────────────
+
 // DOM elements
 const sidebar = document.getElementById('sidebar');
 const btnMenu = document.getElementById('btnMenu');
@@ -102,6 +126,80 @@ function setupEventListeners() {
 
     // File preview update handler
     window.onFilePreviewUpdate = updateFilePreview;
+
+    // ── Persona modal ──────────────────────────────────────────────────────
+    const personaModal   = document.getElementById('personaModal');
+    const personaInput   = document.getElementById('personaInput');
+    const personaCharCount = document.getElementById('personaCharCount');
+    const btnPersona     = document.getElementById('btnPersona');
+    const btnPersonaClose  = document.getElementById('btnPersonaClose');
+    const btnPersonaCancel = document.getElementById('btnPersonaCancel');
+    const btnPersonaApply  = document.getElementById('btnPersonaApply');
+
+    function openPersonaModal() {
+        personaInput.value = currentPersona;
+        updateCharCount();
+        highlightActivePreset();
+        personaModal.style.display = 'flex';
+        personaInput.focus();
+    }
+
+    function closePersonaModal() {
+        personaModal.style.display = 'none';
+    }
+
+    function updateCharCount() {
+        const len = personaInput.value.length;
+        personaCharCount.textContent = `${len} / 500`;
+    }
+
+    function highlightActivePreset() {
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.persona === currentPersona);
+        });
+    }
+
+    if (btnPersona)       btnPersona.addEventListener('click', openPersonaModal);
+    if (btnPersonaClose)  btnPersonaClose.addEventListener('click', closePersonaModal);
+    if (btnPersonaCancel) btnPersonaCancel.addEventListener('click', closePersonaModal);
+
+    // Click outside to close
+    if (personaModal) {
+        personaModal.addEventListener('click', (e) => {
+            if (e.target === personaModal) closePersonaModal();
+        });
+    }
+
+    // Char counter
+    if (personaInput) {
+        personaInput.addEventListener('input', () => {
+            updateCharCount();
+            // Clear preset highlight when user types custom text
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+        });
+    }
+
+    // Preset buttons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            personaInput.value = btn.dataset.persona;
+            updateCharCount();
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+
+    // Apply button
+    if (btnPersonaApply) {
+        btnPersonaApply.addEventListener('click', () => {
+            applyPersona(personaInput.value);
+            closePersonaModal();
+        });
+    }
+
+    // Restore persona label on page load
+    applyPersona(currentPersona);
+    // ──────────────────────────────────────────────────────────────────────
 }
 
 /**

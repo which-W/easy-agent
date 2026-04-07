@@ -17,6 +17,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., description="User message")
     files: List[FileReference] = Field(default=[], description="Attached files")
     deep_research: bool = Field(default=False, description="Enable deep research mode")
+    persona: Optional[str] = Field(None, description="Custom agent persona / system prompt")
 
 
 class UploadResponse(BaseModel):

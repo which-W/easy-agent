@@ -919,3 +919,187 @@ html, body {
     background: transparent;
     padding: 0;
 }
+
+/* === Persona Button (Header) === */
+.btn-persona {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    white-space: nowrap;
+    max-width: 160px;
+}
+.btn-persona:hover {
+    border-color: var(--accent);
+    background: var(--bg-secondary);
+}
+
+/* === Modal Overlay === */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    width: min(560px, 94vw);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+.modal-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+}
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.2s;
+}
+.modal-close:hover { color: var(--text-primary); }
+
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* === Preset Grid === */
+.preset-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 8px;
+}
+.preset-btn {
+    padding: 9px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s, background 0.2s;
+    line-height: 1.4;
+}
+.preset-btn:hover {
+    background: var(--bg-primary);
+    border-color: var(--accent);
+}
+.preset-btn.active {
+    border-color: var(--accent);
+    background: rgba(88,166,255,0.08);
+    color: var(--accent);
+}
+
+/* === Custom Textarea === */
+.char-count {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    text-transform: none;
+    letter-spacing: 0;
+}
+.persona-textarea {
+    width: 100%;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: var(--font-sans);
+    padding: 12px 14px;
+    resize: vertical;
+    min-height: 100px;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+}
+.persona-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+.persona-textarea::placeholder { color: var(--text-secondary); }
+
+/* === Modal Footer === */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+}
+.btn-cancel {
+    padding: 8px 18px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+.btn-cancel:hover { border-color: var(--text-primary); color: var(--text-primary); }
+
+.btn-apply {
+    padding: 8px 20px;
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-apply:hover { background: var(--accent-hover); }
+
+/* === Header Actions layout fix === */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
