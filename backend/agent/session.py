@@ -6,7 +6,6 @@ from typing import Dict, Optional, Any
 from agentscope.agent import ReActAgent
 
 from agent.factory import AgentFactory
-from agent.mcp_manager import MCPManager
 
 class Session:
     """Represents a conversation session"""
@@ -82,36 +81,39 @@ class SessionManager:
 
         return session
 
-    def _build_sys_prompt(self, persona: Optional[str], include_tools=True) -> str:
+    def _build_sys_prompt(self, persona: Optional[str]) -> str:
+        """Compose the full system prompt from persona + available MCP tools.
+
+        Uses self.factory.mcp_manager (the already-connected instance) so the
+        tool list is accurate after connect_all() has run.
         """
-        Compose the full system prompt
-        """
-        base_prompt = ""
-        
-        # 1. 先获取 MCP 工具列表
-        if include_tools:
-            tool_info = MCPManager().get_tools_info() # 假设你有一个单例或能获取实例的方法
-            if tool_info:
-                tools_desc = "\n".join([
-                    f"- {t['name']} ({t['server']}): {t['description']}" 
-                    for t in tool_info
-                ])
-                base_prompt += f"## 可用工具 (Available Tools)\n"
-                base_prompt += f"你可以使用以下工具来完成任务：\n{tools_desc}\n\n"
-        
-        # 2. 添加基础能力
-        base_prompt += (
+        parts = []
+
+        # 1. MCP tool descriptions — only if tools are actually connected
+        tool_info = self.factory.mcp_manager.get_tools_info()
+        if tool_info:
+            tools_desc = "\n".join(
+                f"- {t['name']} ({t['server']}): {t['description']}"
+                for t in tool_info
+            )
+            parts.append(
+                "## 可用工具 (Available Tools)\n"
+                f"你可以使用以下工具来完成任务：\n{tools_desc}"
+            )
+
+        # 2. Base capability description
+        parts.append(
             "你是一个支持多模态对话和深度研究的AI助手。"
             "你可以理解文本、图片和视频输入，"
-            "能够生成文本、图片和分析视觉内容。"
-            "在深度研究模式下，你会进行更深入的思考和分析。\n"
+            "能够生成文本、分析视觉内容。"
+            "在深度研究模式下，你会进行更深入的思考和分析。"
         )
 
-        # 3. 添加 Persona (如果有的话)
+        # 3. User-defined persona (if any)
         if persona and persona.strip():
-            base_prompt += f"\n## 用户设定 (Persona)\n{persona.strip()}\n"
-        
-        return base_prompt
+            parts.append(f"## 用户设定 (Persona)\n{persona.strip()}")
+
+        return "\n\n".join(parts)
 
     def get_session(self, session_id: str) -> Optional[Session]:
         """Get session by ID"""
