@@ -470,11 +470,11 @@ class ChatController {
         block._accumulatedText += text;
         try {
             const html = marked.parse(block._accumulatedText);
-            block.innerHTML = DOMPurify.sanitize(html);
+            // 在末尾添加光标元素
+            block.innerHTML = DOMPurify.sanitize(html) + '<span class="typing-cursor-inline">▋</span>';
         } catch (e) {
             block.textContent = block._accumulatedText;
         }
-        block.classList.add('typing-cursor');
         this.scrollToBottom();
     }
 
@@ -538,6 +538,10 @@ class ChatController {
      * Finalize message (remove typing cursor)
      */
     finalizeMessage(msgDiv) {
+        // 移除所有打字光标
+        const cursors = msgDiv.querySelectorAll('.typing-cursor-inline');
+        cursors.forEach(c => c.remove());
+        // 移除旧的 typing-cursor class（兼容）
         const textBlock = msgDiv.querySelector('.text-block');
         if (textBlock) {
             textBlock.classList.remove('typing-cursor');

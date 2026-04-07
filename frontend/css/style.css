@@ -397,6 +397,7 @@ html, body {
 .message.assistant .message-content {
     background: var(--bg-tertiary);
     border-bottom-left-radius: 4px;
+    max-width: 80%;
 }
 
 .message-meta {
@@ -429,6 +430,37 @@ html, body {
 .thinking-content {
     color: var(--text-secondary);
     white-space: pre-wrap;
+    line-height: 1.6;
+}
+
+/* Thinking block Markdown styles */
+.thinking-content p {
+    margin: 0 0 8px 0;
+}
+
+.thinking-content p:last-child {
+    margin-bottom: 0;
+}
+
+.thinking-content code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: rgba(110, 118, 129, 0.2);
+    padding: 1px 4px;
+    border-radius: 2px;
+}
+
+.thinking-content pre {
+    background: rgba(0,0,0,0.3);
+    padding: 8px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 6px 0;
+}
+
+.thinking-content pre code {
+    background: transparent;
+    padding: 0;
 }
 
 .thinking-content.collapsed {
@@ -690,6 +722,14 @@ html, body {
     color: var(--accent);
 }
 
+/* 内联打字光标 */
+.typing-cursor-inline {
+    animation: blink 1s step-end infinite;
+    color: var(--accent);
+    font-weight: bold;
+    margin-left: 2px;
+}
+
 @keyframes blink {
     50% { opacity: 0; }
 }
@@ -752,7 +792,113 @@ html, body {
     }
 }
 
-/* === Code Block Styling === */
+/* === Markdown Content in Messages === */
+.text-block {
+    line-height: 1.7;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.text-block p {
+    margin: 0 0 8px 0;
+}
+
+.text-block p:last-child {
+    margin-bottom: 0;
+}
+
+.text-block pre {
+    background: var(--bg-primary);
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 8px 0;
+    font-size: 13px;
+}
+
+.text-block pre code {
+    background: transparent;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.text-block code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: rgba(110, 118, 129, 0.2);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.text-block ul, .text-block ol {
+    margin: 8px 0;
+    padding-left: 24px;
+}
+
+.text-block li {
+    margin-bottom: 4px;
+}
+
+.text-block blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 12px;
+    margin: 8px 0;
+    color: var(--text-secondary);
+}
+
+.text-block h1, .text-block h2, .text-block h3,
+.text-block h4, .text-block h5, .text-block h6 {
+    margin: 12px 0 8px 0;
+    font-weight: 600;
+}
+
+.text-block h1 { font-size: 1.3em; }
+.text-block h2 { font-size: 1.2em; }
+.text-block h3 { font-size: 1.1em; }
+.text-block h4, .text-block h5, .text-block h6 { font-size: 1em; }
+
+.text-block table {
+    border-collapse: collapse;
+    margin: 8px 0;
+    width: 100%;
+    font-size: 13px;
+}
+
+.text-block th, .text-block td {
+    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    text-align: left;
+}
+
+.text-block th {
+    background: var(--bg-primary);
+    font-weight: 600;
+}
+
+.text-block img {
+    max-width: 100%;
+    border-radius: 6px;
+    margin: 8px 0;
+}
+
+.text-block a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.text-block a:hover {
+    text-decoration: underline;
+}
+
+.text-block hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 12px 0;
+}
+
+/* === Code Block Styling (Legacy - kept for compatibility) === */
 .message-content pre {
     background: var(--bg-primary);
     padding: 12px;
