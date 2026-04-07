@@ -210,3 +210,4 @@ __marimo__/
 uploads/
 skills/*/assets/__pycache__/
 nul
+/node_modules/

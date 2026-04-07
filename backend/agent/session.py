@@ -6,7 +6,7 @@ from typing import Dict, Optional, Any
 from agentscope.agent import ReActAgent
 
 from agent.factory import AgentFactory
-
+from agent.mcp_manager import MCPManager
 
 class Session:
     """Represents a conversation session"""
@@ -82,21 +82,36 @@ class SessionManager:
 
         return session
 
-    def _build_sys_prompt(self, persona: Optional[str]) -> Optional[str]:
-        """Compose the full system prompt from the persona string.
-
-        If persona is empty/None, returns None so factory uses its default.
-        Otherwise wraps it with capability instructions.
+    def _build_sys_prompt(self, persona: Optional[str], include_tools=True) -> str:
         """
-        if not persona or not persona.strip():
-            return None
-
-        return (
-            f"{persona.strip()}\n\n"
-            "你同时支持多模态对话：可以理解文本、图片和视频输入，"
-            "能够生成文本、分析视觉内容。"
-            "在深度研究模式下，你会进行更深入的思考和分析。"
+        Compose the full system prompt
+        """
+        base_prompt = ""
+        
+        # 1. 先获取 MCP 工具列表
+        if include_tools:
+            tool_info = MCPManager().get_tools_info() # 假设你有一个单例或能获取实例的方法
+            if tool_info:
+                tools_desc = "\n".join([
+                    f"- {t['name']} ({t['server']}): {t['description']}" 
+                    for t in tool_info
+                ])
+                base_prompt += f"## 可用工具 (Available Tools)\n"
+                base_prompt += f"你可以使用以下工具来完成任务：\n{tools_desc}\n\n"
+        
+        # 2. 添加基础能力
+        base_prompt += (
+            "你是一个支持多模态对话和深度研究的AI助手。"
+            "你可以理解文本、图片和视频输入，"
+            "能够生成文本、图片和分析视觉内容。"
+            "在深度研究模式下，你会进行更深入的思考和分析。\n"
         )
+
+        # 3. 添加 Persona (如果有的话)
+        if persona and persona.strip():
+            base_prompt += f"\n## 用户设定 (Persona)\n{persona.strip()}\n"
+        
+        return base_prompt
 
     def get_session(self, session_id: str) -> Optional[Session]:
         """Get session by ID"""
@@ -131,6 +146,7 @@ class SessionManager:
             del self.sessions[sid]
             print(f"Cleaned up expired session: {sid}")
 
+    
 
 # Global session manager instance
 session_manager = SessionManager()

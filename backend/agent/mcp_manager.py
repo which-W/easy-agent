@@ -6,9 +6,10 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from contextlib import AsyncExitStack
-
+from mcp import StdioServerParameters
 from config import get_settings, PROJECT_ROOT
-
+from mcp.client.stdio import stdio_client  
+from mcp import ClientSession
 logger = logging.getLogger(__name__)
 
 
@@ -21,6 +22,19 @@ class MCPManager:
         self.servers: Dict[str, Any] = {}  # server_name -> {session, tools, ...}
         self.exit_stack = AsyncExitStack()
         self._connected = False
+        class SimpleToolkit:
+            def __init__(self):
+                self.tools = {}
+            
+            def register_tool_function(self, func, description=""):
+                # 将函数存入字典，键为函数名
+                self.tools[func.__name__] = {
+                    "func": func,
+                    "description": description
+                }
+                print(f"   🛠️ 工具已注册: {func.__name__} - {description}")
+
+        self.toolkit = SimpleToolkit()
 
     async def connect_all(self):
         """Read mcp_servers.json and connect to all configured servers via stdio"""
@@ -44,44 +58,54 @@ class MCPManager:
 
         self._connected = True
 
-    async def _connect_server(self, name: str, config: dict):
-        """Connect to a single MCP server via stdio transport"""
-        from mcp import ClientSession, StdioServerParameters
-        from mcp.client.stdio import stdio_client
+    async def _connect_server(self, name: str, config: Dict[str, Any]):
+        try:
+            # 1. 准备参数
+            params = StdioServerParameters(
+                command=config["command"],
+                args=config.get("args", []),
+                env=config.get("env", None)
+            )
+            
+            # 2. 使用 async with 进入 stdio_client 上下文
+            # ✅ 正确用法：async with ... as (read, write)
+            async with stdio_client(params) as (read, write):
+                # 在这里创建会话
+                async with ClientSession(read, write) as session:
+                    # 3. 初始化会话
+                    await session.initialize()
+                    
+                    # 4. 获取工具列表
+                    tools = await session.list_tools()
+                    
+                    print(f"✅ [MCP {name}] 发现 {len(tools.tools)} 个工具")
+                    
+                    # 5. 注册工具
+                    for tool in tools.tools:
+                        tool_name = tool.name
+                        tool_desc = tool.description or "No description provided."
+                        
+                        # 动态创建工具包装函数
+                        async def mcp_tool_wrapper(**kwargs):
+                            result = await session.call_tool(name=tool_name, arguments=kwargs)
+                            if result.content and len(result.content) > 0:
+                                return result.content[0].text
+                            return str(result)
 
-        command = config.get("command", "")
-        args = config.get("args", [])
-        env = config.get("env", None)
-
-        server_params = StdioServerParameters(
-            command=command,
-            args=args,
-            env=env
-        )
-
-        # Use exit stack to manage the lifecycle
-        stdio_transport = await self.exit_stack.enter_async_context(
-            stdio_client(server_params)
-        )
-        read_stream, write_stream = stdio_transport
-
-        session = await self.exit_stack.enter_async_context(
-            ClientSession(read_stream, write_stream)
-        )
-
-        await session.initialize()
-
-        # Discover tools
-        tools_result = await session.list_tools()
-        tools = tools_result.tools if hasattr(tools_result, 'tools') else []
-
-        self.servers[name] = {
-            "session": session,
-            "tools": tools,
-            "config": config
-        }
-
-        logger.info(f"MCP server '{name}' provides {len(tools)} tools")
+                        mcp_tool_wrapper.__name__ = tool_name
+                        
+                        # 注册工具
+                        self.toolkit.register_tool_function(
+                            mcp_tool_wrapper,
+                            description=tool_desc
+                        )
+                        
+            print(f"✅ [MCP {name}] 成功连接！")
+            
+        except Exception as e:
+            print(f"❌ [MCP {name}] 连接失败: {e}")
+            import traceback
+            traceback.print_exc()
 
     async def call_tool(self, server_name: str, tool_name: str, arguments: dict) -> Any:
         """Call a tool on a specific MCP server"""
