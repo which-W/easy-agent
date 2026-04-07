@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from agentscope.message import Msg, TextBlock
 from agentscope.message import ImageBlock as ASImageBlock
+from agentscope.message import VideoBlock as ASVideoBlock
 from agentscope.message import URLSource
 
 from models.request import ChatRequest
@@ -66,11 +67,12 @@ async def event_generator(
     done_sent = False
 
     try:
-        # Check if message contains images
+        # Check if message contains images or videos
         has_images = any(f.type == "image" for f in files)
+        has_videos = any(f.type == "video" for f in files)
 
-        # Get or create session (pass has_images to select appropriate model)
-        session = session_manager.get_or_create(session_id, deep_research, has_images)
+        # Get or create session (pass has_multimodal to select appropriate model)
+        session = session_manager.get_or_create(session_id, deep_research, has_images or has_videos)
 
         # Build content for multimodal input
         # DashScope/Qwen VL 模型支持的多模态格式
@@ -132,13 +134,50 @@ async def event_generator(
                             )
                         )
                 elif file_ref.type == "video":
-                    # 视频暂时使用文本描述方式
-                    content_blocks.append(
-                        TextBlock(
-                            type="text",
-                            text=f"[视频文件已上传，MIME类型: {file_ref.mime_type}]"
+                    # Validate base64 data
+                    if not file_ref.base64:
+                        logger.warning("[Chat] Empty base64 data for video, skipping")
+                        content_blocks.append(
+                            TextBlock(
+                                type="text",
+                                text="[视频数据为空，无法显示]"
+                            )
                         )
-                    )
+                        continue
+
+                    # Basic base64 format validation
+                    sample = file_ref.base64[:64]
+                    if not re.match(r'^[A-Za-z0-9+/]', sample):
+                        logger.warning("[Chat] Invalid base64 format for video, skipping")
+                        content_blocks.append(
+                            TextBlock(
+                                type="text",
+                                text="[视频数据格式无效，无法显示]"
+                            )
+                        )
+                        continue
+
+                    # 使用 AgentScope 的 VideoBlock 格式（与 ImageBlock 结构相同）
+                    try:
+                        content_blocks.append(
+                            ASVideoBlock(
+                                type="video",
+                                source=URLSource(
+                                    type="base64",
+                                    media_type=file_ref.mime_type,
+                                    data=file_ref.base64
+                                )
+                            )
+                        )
+                        logger.info(f"[Chat] Added VideoBlock for {file_ref.mime_type}")
+                    except Exception as e:
+                        logger.error(f"[Chat] Failed to create VideoBlock: {e}")
+                        content_blocks.append(
+                            TextBlock(
+                                type="text",
+                                text=f"[视频处理失败: {str(e)}]"
+                            )
+                        )
             
             user_msg = Msg(
                 name="user",

@@ -35,14 +35,15 @@ class SessionManager:
         self,
         session_id: Optional[str],
         deep_research: bool = False,
-        has_images: bool = False
+        has_multimodal: bool = False
     ) -> Session:
         """Get existing session or create new one
 
         Args:
             session_id: Session ID, creates new if None or not found
             deep_research: Whether to create agent in deep research mode
-            has_images: Whether the message contains images (to select vision model)
+            has_multimodal: Whether the message contains images or videos
+                            (automatically selects vision model)
 
         Returns:
             Session object
@@ -61,7 +62,7 @@ class SessionManager:
         agent = self.factory.create_agent(
             name="assistant",
             deep_research=deep_research,
-            has_images=has_images
+            has_multimodal=has_multimodal
         )
         session = Session(new_session_id, agent)
         self.sessions[new_session_id] = session

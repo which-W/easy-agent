@@ -31,7 +31,7 @@ class AgentFactory:
         name: str = "assistant",
         sys_prompt: Optional[str] = None,
         deep_research: bool = False,
-        has_images: bool = False
+        has_multimodal: bool = False
     ) -> ReActAgent:
         """Create a configured ReActAgent
 
@@ -39,7 +39,8 @@ class AgentFactory:
             name: Agent name
             sys_prompt: System prompt (uses default if None)
             deep_research: Enable deep thinking mode for research
-            has_images: Whether the message contains images (to select vision model)
+            has_multimodal: Whether the message contains images or videos
+                            (automatically selects vision model)
 
         Returns:
             Configured ReActAgent instance
@@ -52,9 +53,9 @@ class AgentFactory:
                 "在深度研究模式下，你会进行更深入的思考和分析。"
             )
 
-        # Create model with appropriate settings
-        # Use vision model when deep_research is enabled or when message contains images
-        use_vision_model = deep_research or has_images
+        # Use vision model when deep_research is enabled or when message contains
+        # images or videos (any multimodal content requires a VL model)
+        use_vision_model = deep_research or has_multimodal
         model = DashScopeChatModel(
             model_name=self.settings.VISION_MODEL if use_vision_model else self.settings.CHAT_MODEL,
             api_key=self.settings.DASHSCOPE_API_KEY,
