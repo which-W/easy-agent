@@ -83,6 +83,25 @@ class ChatController {
     }
 
     /**
+     * Update conversation title
+     */
+    updateConversationTitle(id, newTitle) {
+        const conv = this.conversations.find(c => c.id === id);
+        if (conv && newTitle && newTitle.trim()) {
+            conv.title = newTitle.trim();
+            conv.updatedAt = Date.now();
+            this.saveConversations();
+            this.renderConversationList();
+            
+            // Update current chat title display if this is the active conversation
+            const currentTitleEl = document.getElementById('currentChatTitle');
+            if (currentTitleEl && this.currentConversationId === id) {
+                currentTitleEl.textContent = conv.title;
+            }
+        }
+    }
+
+    /**
      * Render conversation list in sidebar
      */
     renderConversationList() {
@@ -93,19 +112,104 @@ class ChatController {
         this.conversations.forEach(conv => {
             const item = document.createElement('div');
             item.className = 'conversation-item' + (conv.id === this.currentConversationId ? ' active' : '');
-            item.innerHTML = `
-                <div class="conversation-title">${this.escapeHtml(conv.title)}</div>
-                <div class="conversation-preview">${this.escapeHtml(conv.preview || '')}</div>
-                <button class="conversation-delete" onclick="event.stopPropagation();" title="删除对话">×</button>
-            `;
-            item.addEventListener('click', () => this.loadConversation(conv.id));
-            const deleteBtn = item.querySelector('.conversation-delete');
+            item.dataset.id = conv.id;
+            
+            // 左侧内容区域
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'conversation-content';
+            
+            // Title container for editing
+            const titleContainer = document.createElement('div');
+            titleContainer.className = 'conversation-title-container';
+            
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'conversation-title';
+            titleSpan.textContent = conv.title;
+            
+            const editInput = document.createElement('input');
+            editInput.type = 'text';
+            editInput.className = 'conversation-edit-input';
+            editInput.value = conv.title;
+            editInput.style.display = 'none';
+            
+            titleContainer.appendChild(titleSpan);
+            titleContainer.appendChild(editInput);
+            
+            const previewSpan = document.createElement('div');
+            previewSpan.className = 'conversation-preview';
+            previewSpan.textContent = conv.preview || '';
+            
+            contentDiv.appendChild(titleContainer);
+            contentDiv.appendChild(previewSpan);
+            
+            // 删除按钮
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'conversation-delete';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.title = '删除对话';
+            
+            item.appendChild(contentDiv);
+            item.appendChild(deleteBtn);
+            
+            // Double-click to edit title
+            titleSpan.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                this.startEditingTitle(conv.id, titleSpan, editInput);
+            });
+            
+            // Handle edit input
+            editInput.addEventListener('blur', () => {
+                this.finishEditingTitle(conv.id, editInput, titleSpan);
+            });
+            
+            editInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    editInput.blur();
+                }
+            });
+            
+            // Click to load conversation
+            item.addEventListener('click', (e) => {
+                if (e.target !== deleteBtn && e.target !== editInput && e.target !== titleSpan) {
+                    this.loadConversation(conv.id);
+                }
+            });
+            
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.deleteConversation(conv.id);
             });
+            
             this.conversationList.appendChild(item);
         });
+    }
+
+    /**
+     * Start editing conversation title
+     */
+    startEditingTitle(convId, titleSpan, editInput) {
+        titleSpan.style.display = 'none';
+        editInput.style.display = 'block';
+        editInput.style.width = '100%';
+        editInput.focus();
+        editInput.select();
+    }
+
+    /**
+     * Finish editing conversation title
+     */
+    finishEditingTitle(convId, editInput, titleSpan) {
+        const newTitle = editInput.value.trim();
+        if (newTitle) {
+            this.updateConversationTitle(convId, newTitle);
+        }
+        // Update input value to current title in case edit was cancelled
+        const conv = this.conversations.find(c => c.id === convId);
+        if (conv) {
+            editInput.value = conv.title;
+        }
+        titleSpan.style.display = 'block';
+        editInput.style.display = 'none';
     }
 
     /**
@@ -153,6 +257,12 @@ class ChatController {
                     this.finalizeMessage(assistantDiv);
                 }
             }
+        }
+        
+        // Update current chat title
+        const currentTitleEl = document.getElementById('currentChatTitle');
+        if (currentTitleEl) {
+            currentTitleEl.textContent = conv.title;
         }
         
         this.renderConversationList();
@@ -222,8 +332,10 @@ class ChatController {
             
             this.finalizeMessage(skillMsg);
             
-            // Save conversation
-            this.saveConversation(`/${skillName} ${args.substring(0, 20)}`, result.output?.substring(0, 50) || 'Skill executed');
+            // Save conversation with first message as title
+            const title = `/${skillName} ${args.substring(0, 30)}${args.length > 30 ? '...' : ''}`;
+            const preview = result.output?.substring(0, 50) + '...' || 'Skill executed';
+            this.saveConversation(title, preview);
             
         } catch (error) {
             this.updateToolStatus(toolBlock, 'error', { name: skillName });

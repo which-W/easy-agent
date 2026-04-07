@@ -1103,3 +1103,123 @@ html, body {
     align-items: center;
     gap: 12px;
 }
+
+.conversation-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.conversation-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.conversation-item.active {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* 左侧内容区域 - 占据剩余空间 */
+.conversation-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* Title container */
+.conversation-title-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 2px;
+}
+
+.conversation-title {
+    flex: 1;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 500;
+    color: #e1e4e8;
+}
+
+.conversation-edit-input {
+    flex: 1;
+    min-width: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #4c9aff;
+    border-radius: 4px;
+    color: white;
+    font-size: 13px;
+    padding: 4px 6px;
+    outline: none;
+    font-family: inherit;
+}
+
+.conversation-edit-input:focus {
+    border-color: #4c9aff;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Preview text */
+.conversation-preview {
+    font-size: 12px;
+    color: #8b949e;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 删除按钮 */
+.conversation-delete {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    background: none;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #8b949e;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+}
+
+.conversation-delete:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #f85149;
+}
+
+/* Sidebar hover zone - 左侧边缘检测区域 */
+.sidebar-hover-zone {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 8px;
+    height: 100%;
+    z-index: 99;
+    cursor: pointer;
+}
+
+/* 侧边栏收起时的宽度 */
+.sidebar.collapsed {
+    width: 0;
+    min-width: 0;
+    overflow: hidden;
+    padding: 0;
+}
+
+/* 侧边栏正常宽度 */
+.sidebar {
+    transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
+}
