@@ -3,11 +3,14 @@
 import json
 import asyncio
 import logging
+import re
 from typing import AsyncGenerator
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
-from agentscope.message import Msg
+from agentscope.message import Msg, TextBlock
+from agentscope.message import ImageBlock as ASImageBlock
+from agentscope.message import URLSource
 
 from models.request import ChatRequest
 from agent.session import session_manager
@@ -63,39 +66,92 @@ async def event_generator(
     done_sent = False
 
     try:
-        # Get or create session
-        session = session_manager.get_or_create(session_id, deep_research)
+        # Check if message contains images
+        has_images = any(f.type == "image" for f in files)
 
-        # Build content blocks
-        content_blocks = [{"type": "text", "text": message}]
+        # Get or create session (pass has_images to select appropriate model)
+        session = session_manager.get_or_create(session_id, deep_research, has_images)
 
-        # Add file references
-        for file_ref in files:
-            if file_ref.type == "image":
-                content_blocks.append({
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": file_ref.mime_type,
-                        "data": file_ref.base64
-                    }
-                })
-            elif file_ref.type == "video":
-                content_blocks.append({
-                    "type": "video",
-                    "source": {
-                        "type": "base64",
-                        "media_type": file_ref.mime_type,
-                        "data": file_ref.base64
-                    }
-                })
-
-        # Create user message
-        user_msg = Msg(
-            name="user",
-            content=content_blocks if len(content_blocks) > 1 else message,
-            role="user"
-        )
+        # Build content for multimodal input
+        # DashScope/Qwen VL 模型支持的多模态格式
+        logger.info(f"[Chat] Processing {len(files)} files for multimodal input")
+        
+        if files:
+            # 使用 AgentScope 的 Block 类构建多模态消息
+            # DashScopeChatFormatter 期望的格式:
+            # - TextBlock: {"type": "text", "text": "..."}
+            # - ImageBlock: {"type": "image", "source": {"type": "base64", "media_type": "...", "data": "..."}}
+            content_blocks = [TextBlock(type="text", text=message)]
+            
+            for file_ref in files:
+                logger.info(f"[Chat] File type: {file_ref.type}, mime_type: {file_ref.mime_type}")
+                if file_ref.type == "image":
+                    # Validate base64 data
+                    if not file_ref.base64:
+                        logger.warning("[Chat] Empty base64 data for image, skipping")
+                        content_blocks.append(
+                            TextBlock(
+                                type="text",
+                                text="[图片数据为空，无法显示]"
+                            )
+                        )
+                        continue
+                    
+                    # Basic base64 format validation (sample first 64 chars to avoid
+                    # running a slow full-string regex over potentially MB-sized data)
+                    sample = file_ref.base64[:64]
+                    if not re.match(r'^[A-Za-z0-9+/]', sample):
+                        logger.warning("[Chat] Invalid base64 format for image, skipping")
+                        content_blocks.append(
+                            TextBlock(
+                                type="text",
+                                text="[图片数据格式无效，无法显示]"
+                            )
+                        )
+                        continue
+                    
+                    # 使用 AgentScope 的 ImageBlock 格式
+                    try:
+                        content_blocks.append(
+                            ASImageBlock(
+                                type="image",
+                                source=URLSource(
+                                    type="base64",
+                                    media_type=file_ref.mime_type,
+                                    data=file_ref.base64
+                                )
+                            )
+                        )
+                        logger.info(f"[Chat] Added ImageBlock for {file_ref.mime_type}")
+                    except Exception as e:
+                        logger.error(f"[Chat] Failed to create ImageBlock: {e}")
+                        content_blocks.append(
+                            TextBlock(
+                                type="text",
+                                text=f"[图片处理失败: {str(e)}]"
+                            )
+                        )
+                elif file_ref.type == "video":
+                    # 视频暂时使用文本描述方式
+                    content_blocks.append(
+                        TextBlock(
+                            type="text",
+                            text=f"[视频文件已上传，MIME类型: {file_ref.mime_type}]"
+                        )
+                    )
+            
+            user_msg = Msg(
+                name="user",
+                content=content_blocks,
+                role="user"
+            )
+        else:
+            # 纯文本消息
+            user_msg = Msg(
+                name="user",
+                content=message,
+                role="user"
+            )
 
         # Add to agent memory
         session.agent.observe(user_msg)

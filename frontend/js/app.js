@@ -114,7 +114,7 @@ async function handleFileSelection(files) {
             const fileInfo = {
                 type: file.type.startsWith('image') ? 'image' : 'video',
                 base64: base64,
-                mimeType: mimeType,
+                mime_type: mimeType,
                 name: file.name,
                 previewUrl: UploadHandler.createPreviewUrl(file)
             };

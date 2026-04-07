@@ -30,7 +30,8 @@ class AgentFactory:
         self,
         name: str = "assistant",
         sys_prompt: Optional[str] = None,
-        deep_research: bool = False
+        deep_research: bool = False,
+        has_images: bool = False
     ) -> ReActAgent:
         """Create a configured ReActAgent
 
@@ -38,6 +39,7 @@ class AgentFactory:
             name: Agent name
             sys_prompt: System prompt (uses default if None)
             deep_research: Enable deep thinking mode for research
+            has_images: Whether the message contains images (to select vision model)
 
         Returns:
             Configured ReActAgent instance
@@ -51,8 +53,10 @@ class AgentFactory:
             )
 
         # Create model with appropriate settings
+        # Use vision model when deep_research is enabled or when message contains images
+        use_vision_model = deep_research or has_images
         model = DashScopeChatModel(
-            model_name=self.settings.VISION_MODEL if deep_research else self.settings.CHAT_MODEL,
+            model_name=self.settings.VISION_MODEL if use_vision_model else self.settings.CHAT_MODEL,
             api_key=self.settings.DASHSCOPE_API_KEY,
             stream=True,
             enable_thinking=deep_research and self.settings.ENABLE_DEEP_THINKING,
