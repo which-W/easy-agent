@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy-Agent - AI Assistant</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo">Easy-Agent</h1>
+                <button class="btn-new-chat" id="btnNewChat">
+                    <span class="icon">+</span> 新对话
+                </button>
+            </div>
+
+            <div class="sidebar-section">
+                <h3 class="section-title">对话历史</h3>
+                <div class="conversation-list" id="conversationList">
+                    <!-- Conversations will be added here dynamically -->
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="btn-toggle-sidebar" id="btnToggleSidebar">
+                    关闭侧边栏
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="chat-header">
+                <button class="btn-menu" id="btnMenu">☰</button>
+                <h2 class="current-chat-title" id="currentChatTitle">新对话</h2>
+                <div class="header-actions">
+                    <label class="toggle-deep-research">
+                        <input type="checkbox" id="deepResearchToggle">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">深度研究</span>
+                    </label>
+                </div>
+            </header>
+
+            <!-- Messages Container -->
+            <div class="messages-container" id="messagesContainer">
+                <div class="welcome-message" id="welcomeMessage">
+                    <div class="welcome-icon">🤖</div>
+                    <h2>欢迎使用 Easy-Agent</h2>
+                    <p>支持文本、图片、视频的多模态 AI 对话</p>
+                    <p class="hint">输入消息开始对话，或上传文件进行多模态交互</p>
+                </div>
+                <!-- Messages will be added here dynamically -->
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <!-- File Preview -->
+                <div class="file-preview" id="filePreview" style="display: none;">
+                    <div class="file-preview-list" id="filePreviewList">
+                        <!-- File previews will be added here -->
+                    </div>
+                </div>
+
+                <div class="input-wrapper">
+                    <button class="btn-attach" id="btnAttach" title="上传文件">
+                        📎
+                    </button>
+                    <input type="file" id="fileInput" style="display: none;" accept="image/*,video/*" multiple>
+
+                    <textarea
+                        class="message-input"
+                        id="messageInput"
+                        placeholder="输入消息... (Shift+Enter 换行)"
+                        rows="1"
+                    ></textarea>
+
+                    <button class="btn-send" id="btnSend" title="发送">
+                        <span class="send-icon">▶</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>处理中...</p>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11"></script>
+    <script src="js/sse.js"></script>
+    <script src="js/upload.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
