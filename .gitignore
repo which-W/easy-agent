@@ -212,3 +212,4 @@ skills/*/assets/__pycache__/
 nul
 /node_modules/
 .qoder
+.claude
