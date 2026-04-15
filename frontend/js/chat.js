@@ -419,23 +419,37 @@ class ChatController {
                     this.updateThinkingBlock(thinkingBlock, data.thinking || data.content || data.text);
                 },
                 text: (data) => {
+                    // Text arriving means any pending tool call has finished
+                    if (toolBlock) {
+                        this.finalizeToolBlock(toolBlock);
+                        toolBlock = null;
+                    }
                     if (!textBlock) {
                         textBlock = this.createTextBlock(assistantMsg);
                     }
                     this.updateTextBlock(textBlock, data.text || data.content);
                 },
                 tool_use: (data) => {
-                    if (!toolBlock) {
-                        toolBlock = this.createToolBlock(assistantMsg, data.name);
+                    // Finalize previous tool block if it never got a tool_result
+                    if (toolBlock) {
+                        this.finalizeToolBlock(toolBlock);
                     }
+                    textBlock = null; // new tool call starts a new text segment after it
+                    toolBlock = this.createToolBlock(assistantMsg, data.name);
                     this.updateToolStatus(toolBlock, 'running', data);
                 },
                 tool_result: (data) => {
                     if (toolBlock) {
                         this.updateToolResult(toolBlock, data);
+                        toolBlock = null;
                     }
                 },
                 done: (data) => {
+                    // Finalize any pending tool block
+                    if (toolBlock) {
+                        this.finalizeToolBlock(toolBlock);
+                        toolBlock = null;
+                    }
                     this.currentSessionId = data.session_id;
                     this.isStreaming = false;
                     this.btnSend.disabled = false;
@@ -619,6 +633,20 @@ class ChatController {
     }
 
     /**
+     * Finalize a tool block that never received a tool_result event.
+     * Marks it as completed and hides the spinner.
+     */
+    finalizeToolBlock(block) {
+        const statusEl = block.querySelector('.tool-status');
+        const spinnerEl = block.querySelector('.tool-spinner');
+        if (statusEl && statusEl.textContent === '运行中...') {
+            statusEl.textContent = '完成';
+            statusEl.style.color = 'var(--success, #27ae60)';
+        }
+        if (spinnerEl) spinnerEl.style.display = 'none';
+    }
+
+    /**
      * Update tool result
      */
     updateToolResult(block, data) {
@@ -626,25 +654,53 @@ class ChatController {
         const statusEl = block.querySelector('.tool-status');
         const spinnerEl = block.querySelector('.tool-spinner');
 
-        statusEl.textContent = '完成';
-        if (spinnerEl) {
-            spinnerEl.style.display = 'none';
+        // Determine success or error from output text
+        const outputText = this._extractToolOutputText(data);
+        const isError = outputText.startsWith('❌');
+
+        statusEl.textContent = isError ? '失败' : '完成';
+        statusEl.style.color = isError ? 'var(--error, #e74c3c)' : 'var(--success, #27ae60)';
+        if (spinnerEl) spinnerEl.style.display = 'none';
+
+        // Render output
+        if (outputText) {
+            const pre = document.createElement('pre');
+            pre.className = 'tool-output-code';
+            pre.textContent = outputText;
+            resultEl.appendChild(pre);
         }
 
-        // Handle different result types
+        // Handle image outputs
         if (data.output && Array.isArray(data.output)) {
             for (const item of data.output) {
                 if (item.type === 'image' && item.source) {
-                    if (item.source.url) {
-                        resultEl.innerHTML += `<img src="${item.source.url}" alt="Tool result image">`;
-                    } else if (item.source.base64) {
-                        resultEl.innerHTML += `
-                            <img src="data:${item.source.media_type};base64,${item.source.base64}" alt="Tool result image">
-                        `;
-                    }
+                    const src = item.source.url
+                        ? item.source.url
+                        : `data:${item.source.media_type};base64,${item.source.base64}`;
+                    resultEl.innerHTML += `<img src="${src}" alt="Tool result image" style="max-width:100%;margin-top:6px;">`;
                 }
             }
         }
+    }
+
+    /**
+     * Extract plain text from tool result data
+     */
+    _extractToolOutputText(data) {
+        const out = data.output;
+        if (!out) return '';
+        if (typeof out === 'string') return out;
+        if (Array.isArray(out)) {
+            return out
+                .map(item => {
+                    if (typeof item === 'string') return item;
+                    if (item.type === 'text') return item.text || '';
+                    return '';
+                })
+                .filter(Boolean)
+                .join('\n');
+        }
+        return String(out);
     }
 
     /**

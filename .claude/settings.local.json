@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(taskkill /PID 153028 /F)",
+      "Bash(taskkill /PID 151876 /F)",
+      "Bash(python -c \"import agentscope; import os; print\\(os.path.dirname\\(agentscope.__file__\\)\\)\")"
+    ]
+  }
+}

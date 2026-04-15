@@ -535,6 +535,21 @@ html, body {
     margin-top: 8px;
 }
 
+.tool-output-code {
+    margin: 0;
+    padding: 8px 10px;
+    background: var(--bg-secondary, #1e1e1e);
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--text-secondary, #ccc);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
 /* === Image/Video in Messages === */
 .message-image {
     margin: 8px 0;

@@ -175,7 +175,7 @@ class MCPManager:
         tool_func.__doc__ = description
 
         try:
-            toolkit.register_tool_function(tool_func, description=description)
+            toolkit.register_tool_function(tool_func)
             logger.info("Registered MCP tool: %s (from %s)", tool_name, server_name)
         except Exception as e:
             logger.error("Failed to register MCP tool '%s': %s", tool_name, e)

@@ -21,6 +21,45 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _serialize_tool_result(block: dict) -> dict:
+    """Ensure tool_result block is JSON-serializable.
+
+    The 'output' field may be a ToolResponse object, a list of Block objects,
+    or already a plain string — normalise everything to a plain string.
+    """
+    output = block.get("output", "")
+
+    # ToolResponse object
+    if hasattr(output, "content"):
+        parts = []
+        for item in output.content:
+            if hasattr(item, "text"):
+                parts.append(item.text)
+            else:
+                parts.append(str(item))
+        output = "\n".join(parts)
+    # List of Block objects or dicts
+    elif isinstance(output, list):
+        parts = []
+        for item in output:
+            if hasattr(item, "text"):
+                parts.append(item.text)
+            elif isinstance(item, dict):
+                parts.append(item.get("text", str(item)))
+            else:
+                parts.append(str(item))
+        output = "\n".join(parts)
+    else:
+        output = str(output) if output is not None else ""
+
+    return {
+        "type": "tool_result",
+        "id": block.get("id", ""),
+        "name": block.get("name", ""),
+        "output": output,
+    }
+
+
 def _extract_content_blocks(msg) -> list:
     """Extract content blocks from a message with broad compatibility.
 
@@ -66,6 +105,8 @@ async def event_generator(
     accumulated_text = ""
     accumulated_thinking = ""
     done_sent = False
+    last_tool_use_id = None  # deduplicate streaming tool_use chunks
+    last_tool_result_id = None  # deduplicate streaming tool_result chunks
 
     try:
         # Check if message contains images or videos
@@ -196,7 +237,7 @@ async def event_generator(
             )
 
         # Add to agent memory
-        session.agent.observe(user_msg)
+        await session.agent.observe(user_msg)
 
         # Start agent reply as background task
         reply_task = asyncio.create_task(session.agent(user_msg))
@@ -261,27 +302,78 @@ async def event_generator(
                         if thinking_content and len(thinking_content) > len(accumulated_thinking):
                             delta = thinking_content[len(accumulated_thinking):]
                             accumulated_thinking = thinking_content
-                            yield f"event: thinking\n"
-                            yield f"data: {json.dumps({'thinking': delta}, ensure_ascii=False)}\n\n"
+                            yield f"event: thinking\ndata: {json.dumps({'thinking': delta}, ensure_ascii=False)}\n\n"
                     elif block_type == "text":
                         text_content = block.get("text", "") or block.get("content", "")
                         if text_content and len(text_content) > len(accumulated_text):
                             delta = text_content[len(accumulated_text):]
                             accumulated_text = text_content
-                            yield f"event: text\n"
-                            yield f"data: {json.dumps({'text': delta}, ensure_ascii=False)}\n\n"
+                            yield f"event: text\ndata: {json.dumps({'text': delta}, ensure_ascii=False)}\n\n"
                     elif block_type == "tool_use":
-                        yield f"event: tool_use\n"
-                        yield f"data: {json.dumps(block, ensure_ascii=False)}\n\n"
+                        # Deduplicate: AgentScope streams the same tool_use block
+                        # in every chunk — only emit once per unique tool call id.
+                        tool_id = block.get("id") or block.get("name", "")
+                        if tool_id != last_tool_use_id:
+                            last_tool_use_id = tool_id
+                            accumulated_text = ""
+                            accumulated_thinking = ""
+                            yield f"event: tool_use\ndata: {json.dumps(block, ensure_ascii=False)}\n\n"
                     elif block_type == "tool_result":
-                        yield f"event: tool_result\n"
-                        yield f"data: {json.dumps(block, ensure_ascii=False)}\n\n"
+                        # Deduplicate streaming tool_result chunks the same way.
+                        result_id = block.get("id") or block.get("name", "")
+                        if result_id != last_tool_result_id:
+                            last_tool_result_id = result_id
+                            accumulated_text = ""
+                            accumulated_thinking = ""
+                            yield f"event: tool_result\ndata: {json.dumps(_serialize_tool_result(block), ensure_ascii=False)}\n\n"
 
                 # --- Check if this is the final message ---
                 if last:
+                    # Don't break immediately — AgentScope may put the text
+                    # response into the queue AFTER emitting last=True (e.g.
+                    # post-tool summary).  Wait for the reply task to finish
+                    # and drain whatever is left before sending done.
+                    try:
+                        await asyncio.wait_for(
+                            asyncio.shield(reply_task), timeout=15.0
+                        )
+                    except (asyncio.TimeoutError, Exception):
+                        pass
+                    # Drain any trailing messages
+                    while not session.agent.msg_queue.empty():
+                        try:
+                            extra = session.agent.msg_queue.get_nowait()
+                            extra_msg = extra[0] if isinstance(extra, tuple) else extra
+                            if extra_msg is None:
+                                continue
+                            for eb in _extract_content_blocks(extra_msg):
+                                if not isinstance(eb, dict):
+                                    eb = {"type": "text", "text": str(eb)}
+                                et = eb.get("type", "text")
+                                if et == "text":
+                                    tc = eb.get("text", "") or eb.get("content", "")
+                                    if tc and len(tc) > len(accumulated_text):
+                                        delta = tc[len(accumulated_text):]
+                                        accumulated_text = tc
+                                        yield f"event: text\ndata: {json.dumps({'text': delta}, ensure_ascii=False)}\n\n"
+                                elif et == "tool_use":
+                                    tid = eb.get("id") or eb.get("name", "")
+                                    if tid != last_tool_use_id:
+                                        last_tool_use_id = tid
+                                        accumulated_text = ""
+                                        accumulated_thinking = ""
+                                        yield f"event: tool_use\ndata: {json.dumps(eb, ensure_ascii=False)}\n\n"
+                                elif et == "tool_result":
+                                    rid = eb.get("id") or eb.get("name", "")
+                                    if rid != last_tool_result_id:
+                                        last_tool_result_id = rid
+                                        accumulated_text = ""
+                                        accumulated_thinking = ""
+                                        yield f"event: tool_result\ndata: {json.dumps(_serialize_tool_result(eb), ensure_ascii=False)}\n\n"
+                        except Exception:
+                            break
                     done_sent = True
-                    yield f"event: done\n"
-                    yield f"data: {json.dumps({'session_id': session.session_id})}\n\n"
+                    yield f"event: done\ndata: {json.dumps({'session_id': session.session_id})}\n\n"
                     logger.info("[SSE] Stream completed (last=True) for session %s", session_id)
                     break
 
@@ -292,8 +384,7 @@ async def event_generator(
 
             except Exception as e:
                 logger.error("[SSE] Error processing message: %s", e, exc_info=True)
-                yield f"event: error\n"
-                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
                 break
 
         # Ensure done event is always sent
@@ -302,11 +393,9 @@ async def event_generator(
             if reply_task.done() and reply_task.exception():
                 err = reply_task.exception()
                 logger.error("[SSE] Reply task raised exception: %s", err)
-                yield f"event: error\n"
-                yield f"data: {json.dumps({'error': str(err)})}\n\n"
+                yield f"event: error\ndata: {json.dumps({'error': str(err)})}\n\n"
             done_sent = True
-            yield f"event: done\n"
-            yield f"data: {json.dumps({'session_id': session_id})}\n\n"
+            yield f"event: done\ndata: {json.dumps({'session_id': session_id})}\n\n"
             logger.info("[SSE] Sent final done event for session %s", session_id)
 
     except asyncio.CancelledError:
@@ -318,11 +407,9 @@ async def event_generator(
                 pass
     except Exception as e:
         logger.error("[SSE] Fatal error in event_generator: %s", e, exc_info=True)
-        yield f"event: error\n"
-        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
         if not done_sent:
-            yield f"event: done\n"
-            yield f"data: {json.dumps({'session_id': session_id})}\n\n"
+            yield f"event: done\ndata: {json.dumps({'session_id': session_id})}\n\n"
 
 
 @router.post("/chat/stream")
