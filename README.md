@@ -153,9 +153,7 @@ easy-agent/
 │       └── upload.js       # 文件上传
 │
 ├── skills/                 # AgentScope Skills (示例)
-│   ├── code_executor/      # 代码执行技能
-│   ├── file_ops/           # 文件操作技能
-│   └── web_search/         # 网络搜索技能
+│  
 ├── mcp_servers.json        # MCP 服务器配置文件
 └── .env                    # 环境变量配置文件
 ```
