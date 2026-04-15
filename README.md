@@ -1,7 +1,7 @@
 # easy-agent
 
 基于 AgentScope 的多模态 AI Agent 系统实践。
-
+<img width="2530" height="1164" alt="屏幕截图 2026-04-08 122751" src="https://github.com/user-attachments/assets/093e6e3d-a9ac-4596-b900-4161ae7e11bd" />
 ## 功能特性
 
 - **流式传输**: 支持 SSE (Server-Sent Events) 实时流式输出
